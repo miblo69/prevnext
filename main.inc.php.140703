@@ -1,0 +1,255 @@
+<?php
+
+/*
+Version: 1.0
+Plugin Name: prevnext
+Plugin URI: // Here comes a link to the Piwigo extension gallery, after
+           // publication of your plugin. For auto-updates of the plugin.
+Author:  miblo69 - Mike Blomgren.
+Description: A Plugin to retrieve the Previous/Next Albums, for simpler navigation among many albums.
+Version: 0.1 Alfa
+
+*/
+
+
+// Chech whether we are indeed included by Piwigo.
+if (!defined('PHPWG_ROOT_PATH')) die('Hacking attempt!');
+
+// Define the path to our plugin.
+define('PREVNEXT_PATH', PHPWG_PLUGINS_PATH.basename(dirname(__FILE__)).'/');
+
+include_once( PHPWG_ROOT_PATH.'include/common.inc.php' );
+//include(PHPWG_ROOT_PATH.'include/section_init.inc.php');
+include(PHPWG_ROOT_PATH.'/include/ws_core.inc.php');
+include(PHPWG_ROOT_PATH.'/include/ws_functions.inc.php');
+// Added MB 14-05-05:
+include (PHPWG_ROOT_PATH.'/include/ws_functions/pwg.categories.php');
+//include_once( PHPWG_ROOT_PATH.'/include/common.inc.php' );
+//include(PHPWG_ROOT_PATH.'include/section_init.inc.php');
+
+// Hook on to an event..
+add_event_handler('loc_end_index', 'prevnext_menu');
+//add_event_handler('render_page_banner', 'prevnext_menu');
+
+//global $page;
+//global $user;
+global $template;
+global $myprev, $mynext;
+
+
+function prevnext_menu() {
+  global $id; 
+  global $page;
+  $txtpn = '';
+  //global $user;
+  //echo "page start". $page['start'];
+  //global $template;
+  //foreach ($template as $k => $v) {
+  //foreach ($template as list($k,$v) {
+  //elog("$k => $v.\n");
+  //}
+  //$txt = new PwgNamedArray();
+  //global $category_id;
+  //var_dump($page);
+  if (isset($page['is_homepage'])) {
+  	echo  "Homepage"; 
+  } else { 
+  	//// echo "Not Homepage<br/>";
+  	//echo $currentcats = $txt['categories']->_content;
+  	if (isset($page['category']['id_uppercat'])) {
+  		//echo "set";
+  	} else { return;
+  	echo " not set"; }
+  	$myupperid = $page['category']['id_uppercat'];
+  	$myuppercats = $page['category']['uppercats'];
+  	
+  	//echo "slask: " . $myupperid;
+  	$params['format'] = 'php';
+  	$params['tree_output'] = false;
+  	$params['cat_id']= $myupperid;
+  	$params['recursive'] = false;
+  	$params['public'] = false;
+  	$params['fullname'] = false;
+  	//$txt = ws_categories_getList($params,$service);
+  	//var_dump($params);
+  	$txt = ws_categories_getList($params,$service);
+  	//echo  "<br>Uppercats " . $myuppercats;
+  	//echo  "<br>ID Uppercat " . $myupperid;
+  	//var_dump( get_cat_info($myid));
+  	if (isset($myupperid)) {
+  		//echo " \$myupperid: " .$myupperid;
+  		//echo "<br>get_subcat_ids: <br>";
+  		//echo "<br>get_cat_info on $myupperid: <br>";
+  		$currentcats = $txt['categories']->_content;
+  		//var_dump($currentcats);
+  		$p = 0;
+  		$catid = -1;
+  		//echo "rec srch: " . recursive_array_search($myupperid, $currentcats);
+  		//echo "array search: $myupperid" . array_search((int)$myupperid,$currentcats);
+  		foreach ($currentcats as $name) {
+			$catid += 1;
+  			//// echo "Current IDs: " . $name['id'] . " Catid: $catid <br/>";
+  			if ((int)$name['id'] == (int)$myupperid)  { 
+  				$p = 1; 
+  				//// echo "Found parent match $myupperid<br/>"; 
+  				//continue;
+  				 
+  			} else {
+  				//unset($currentcats[$catid]);
+  				
+  			}
+  			
+  			//echo "number of cats: " . count($currentcats)  . "\$p: " . $p;
+  				
+  			if ($p == 1) {
+  				$txtcurr = '';
+  				$txtprev = '';
+  				$txtnext = '';
+  				
+  				if ($page['category']['id'] == $name['id']) { // Found current Category
+  					//$txtprev = $currentcats[$catid]['url'];
+  					if($catid > 0 and $currentcats[$catid-1]['id'] <> $myupperid) {  // If there is a Previous cat, add it
+  						$txtprev = 'Previous: <a href=' . $currentcats[$catid-1]['url'] . '>' . 
+  						$currentcats[$catid-1]['name'] . "</a>" . "<br>";
+  				
+  					
+  					} else { $txtnext = 'No Prev Cat <br/>'; }
+  					// Add the current Category
+  					$txtcurr .= '<b>Current: <a href=' . $currentcats[$catid-0]['url'] . '>' . 
+  					$currentcats[$catid-0]['name'] . "</a></b><br/>";
+  					
+  					//if ($catid <= count($currentcats)+1) {  // If there is a Next cat, add it
+  					if (array_key_exists($catid+1, $currentcats)) {
+  					  	$txtnext = 'Next: <a href=' . $currentcats[$catid+1]['url'] . '>' .
+  					  	 $currentcats[$catid+1]['name'] . "</a>" . "<br/>";
+  					} else { 
+  						//$txtnext = 'NoNext Cat <br/>'; 
+  					}
+  					$p = 0;
+  				}
+  				//echo $txtprev;
+  				
+  				//$p = 0;  			
+			}
+  			
+		//echo $txtpn;
+		}
+  	echo $txtprev, $txtcurr, $txtnext;
+  	$mynext = $txtnext;
+  	$myprev = $txtprev;
+  		
+  	} else {
+  		//// echo "One down from Top <br>";
+  		
+  		$currentcats = $txt['categories']->_content;
+  		$p = 0;
+  		//var_dump($currentcats);	
+  		foreach ($currentcats as $name) {
+  			$txtcurr = "";
+  				
+  			$txtcurr .= '<a href=' . $name['url'] . '>' . $name['name'] . "</a> <br>";
+  			echo $txtcurr;
+  		}
+  	}
+  	
+  	 
+  }
+  return;
+  //echo "Category: ". $page['category']['name'] . "ID: " . $page['category']['id'];
+  //echo "Category: " . $page['category'];
+  //echo $id;
+  //$id;
+  
+  //var_dump($txt);
+  //var_dump($txt['categories']);
+  
+  /* Create Array with all Categories on smae level as current Category*/
+  //$currentcats = $txt['categories']->_content;
+  //$mycat2=$txt['categories'];
+  //var_dump($mycat2);
+  //var_dump($mycat2->_content);
+  //echo "Cat Contents: <br>";
+  //var_dump($currentcats);
+  //foreach ($params as $name => $value)
+ 
+  	
+  
+ 
+  //echo "Page: " . var_dump($page);
+  //echo "User: " . var_dump($user) ;
+  //echo "<pre>";
+  //echo $GLOBALS["page"]["title"];
+  //echo "Params: " . var_dump($params);
+  //echo "Service: " . var_dump($service);
+  //foreach ($txt as $section => $t1)
+  	//echo $section, $t1;
+  
+  //echo "Txt: " . var_dump($txt);
+  //var_dump($txt->categories);
+  //echo "</pre>";
+  /*
+  $mytest = $txt['categories'];
+  echo "<pre>";
+  var_export($mytest);
+  echo "</pre>";
+  */
+  //var_dump($mytest);
+  //$image['categories'] = new PwgNamedArray($txt,'category', array('id','url','page_url'));
+
+  //if (!defined($txt->code())) {
+  //echo $txt->code(),$txt->message();
+  //}
+  //else
+  //{
+  //echo "slask Type:" . gettype($txt) . "<br />";
+  //echo "cat_id: $category <br />";
+  //var_dump($txt);
+  //$mycats=$txt['categories'];
+  //echo "<br />mycats:";
+  ///var_dump($mytest);
+  /* 
+ $c = $mytest->_content;
+  var_dump($c);
+    
+  foreach ($c as $v => $k) {
+    echo "L1 $k: $v <br /> \n";
+    
+    foreach ($k as $k2) {
+    echo "L2 $k $k2 <br /> \n";
+      //foreach ($v2 as $k => $v3) {
+      //echo "$k: $v3 <br /> \n";
+      //}
+    }
+    
+  }
+  */
+
+  //echo get_class_vars("PwgNamedArray");
+  //$s = new PwgNamedArray();
+
+  //$mytest = new PwgNamedArray;
+  //$mytest = $mycats['_contents'];
+  //foreach ($mycats as $key) {
+    //echo "Key: $key; Value: " . gettype($mycats['category']) ." ,<br />\n";
+  //};
+  
+
+
+
+      //}
+  
+
+  /*
+  array_push(
+	     $menu,
+	     array(
+		   'NAME'  => 'PrevNext',
+		   'URL'   => get_admin_plugin_menu_link(dirname(__FILE__)).'/admin.php'
+		   )
+	     );
+  return $menu;
+  */
+}
+
+
+?>
